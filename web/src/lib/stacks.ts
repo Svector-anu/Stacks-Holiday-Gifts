@@ -1,12 +1,9 @@
-import {
-    openContractCall
-} from '@stacks/connect';
+import { request } from '@stacks/connect';
 import {
     uintCV,
     stringUtf8CV,
     bufferCV,
-    PostConditionMode,
-    Pc,
+    serializeCV,
 } from '@stacks/transactions';
 
 // Contract configuration
@@ -28,14 +25,12 @@ export function generateSecret(): string {
 // Simple hash function for the secret (browser compatible)
 async function sha256Hash(data: Uint8Array): Promise<Uint8Array> {
     if (typeof window !== 'undefined' && window.crypto?.subtle) {
-        // Create a copy of the buffer that TypeScript is happy with
         const buffer = new ArrayBuffer(data.length);
         const view = new Uint8Array(buffer);
         view.set(data);
         const hashBuffer = await window.crypto.subtle.digest('SHA-256', buffer);
         return new Uint8Array(hashBuffer);
     }
-    // Fallback - just return the padded data (for SSR)
     return data;
 }
 
@@ -47,6 +42,12 @@ export function stxToMicroStx(stx: number): bigint {
 // Convert microSTX to STX
 export function microStxToStx(microStx: bigint | number): number {
     return Number(microStx) / 1_000_000;
+}
+
+// Helper to serialize CV to hex
+function cvToHex(cv: ReturnType<typeof uintCV>): string {
+    const serialized = serializeCV(cv);
+    return Array.from(serialized, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 // Create a gift
@@ -67,27 +68,24 @@ export async function createGift(
     paddedData.set(secretData.slice(0, 32));
     const secretHash = await sha256Hash(paddedData);
 
-    // Post condition using Pc helper
-    const postCondition = Pc.principal(senderAddress).willSendLte(amountMicroStx).ustx();
+    try {
+        const response = await request('stx_callContract', {
+            contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
+            functionName: 'create-gift',
+            functionArgs: [
+                cvToHex(uintCV(amountMicroStx)),
+                cvToHex(stringUtf8CV(message)),
+                cvToHex(bufferCV(secretHash)),
+            ],
+        });
 
-    await openContractCall({
-        contractAddress: CONTRACT_ADDRESS,
-        contractName: CONTRACT_NAME,
-        functionName: 'create-gift',
-        functionArgs: [
-            uintCV(amountMicroStx),
-            stringUtf8CV(message),
-            bufferCV(secretHash),
-        ],
-        postConditionMode: PostConditionMode.Deny,
-        postConditions: [postCondition],
-        onFinish: (data) => {
-            onFinish(data.txId);
-        },
-        onCancel: () => {
-            onCancel();
-        },
-    });
+        if (response && response.txid) {
+            onFinish(response.txid);
+        }
+    } catch (error) {
+        console.error('Failed to create gift:', error);
+        onCancel();
+    }
 }
 
 // Claim a gift
@@ -102,23 +100,23 @@ export async function claimGift(
     const paddedSecret = new Uint8Array(32);
     paddedSecret.set(secretData.slice(0, 32));
 
-    await openContractCall({
-        contractAddress: CONTRACT_ADDRESS,
-        contractName: CONTRACT_NAME,
-        functionName: 'claim-gift',
-        functionArgs: [
-            uintCV(giftId),
-            bufferCV(paddedSecret),
-        ],
-        postConditionMode: PostConditionMode.Allow,
-        postConditions: [],
-        onFinish: (data) => {
-            onFinish(data.txId);
-        },
-        onCancel: () => {
-            onCancel();
-        },
-    });
+    try {
+        const response = await request('stx_callContract', {
+            contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
+            functionName: 'claim-gift',
+            functionArgs: [
+                cvToHex(uintCV(giftId)),
+                cvToHex(bufferCV(paddedSecret)),
+            ],
+        });
+
+        if (response && response.txid) {
+            onFinish(response.txid);
+        }
+    } catch (error) {
+        console.error('Failed to claim gift:', error);
+        onCancel();
+    }
 }
 
 // Generate gift link

@@ -1,11 +1,12 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { AppConfig, showConnect, UserSession } from '@stacks/connect';
-
-// App config for Stacks Connect
-const appConfig = new AppConfig(['store_write', 'publish_data']);
-const userSession = new UserSession({ appConfig });
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import {
+    connect as stacksConnect,
+    disconnect as stacksDisconnect,
+    isConnected as stacksIsConnected,
+    getLocalStorage,
+} from '@stacks/connect';
 
 // Network configuration
 const NETWORK = process.env.NEXT_PUBLIC_NETWORK === 'mainnet' ? 'mainnet' : 'testnet';
@@ -13,9 +14,8 @@ const NETWORK = process.env.NEXT_PUBLIC_NETWORK === 'mainnet' ? 'mainnet' : 'tes
 interface WalletContextType {
     isConnected: boolean;
     address: string | null;
-    connect: () => void;
+    connect: () => Promise<void>;
     disconnect: () => void;
-    userSession: UserSession;
     network: string;
 }
 
@@ -25,39 +25,48 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const [isConnected, setIsConnected] = useState(false);
     const [address, setAddress] = useState<string | null>(null);
 
-    // Check if already signed in on mount
-    React.useEffect(() => {
-        if (userSession.isUserSignedIn()) {
-            const userData = userSession.loadUserData();
-            const userAddress = NETWORK === 'mainnet'
-                ? userData.profile.stxAddress.mainnet
-                : userData.profile.stxAddress.testnet;
-            setAddress(userAddress);
-            setIsConnected(true);
+    // Check if already connected on mount
+    useEffect(() => {
+        const checkConnection = async () => {
+            try {
+                const connected = stacksIsConnected();
+                if (connected) {
+                    const storage = getLocalStorage();
+                    if (storage?.addresses?.stx) {
+                        const addresses = storage.addresses.stx;
+                        const addr = addresses.find((a: { symbol: string }) => a.symbol === 'STX');
+                        if (addr) {
+                            setAddress(addr.address);
+                            setIsConnected(true);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.log('Not connected yet');
+            }
+        };
+        checkConnection();
+    }, []);
+
+    const connect = useCallback(async () => {
+        try {
+            const response = await stacksConnect();
+            if (response && response.addresses) {
+                const stxAddress = response.addresses.find(
+                    (addr: { symbol: string }) => addr.symbol === 'STX'
+                );
+                if (stxAddress) {
+                    setAddress(stxAddress.address);
+                    setIsConnected(true);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to connect wallet:', error);
         }
     }, []);
 
-    const connect = useCallback(() => {
-        showConnect({
-            appDetails: {
-                name: 'Stacks Holiday Gifts',
-                icon: '/gift-icon.png',
-            },
-            redirectTo: '/',
-            onFinish: () => {
-                const userData = userSession.loadUserData();
-                const userAddress = NETWORK === 'mainnet'
-                    ? userData.profile.stxAddress.mainnet
-                    : userData.profile.stxAddress.testnet;
-                setAddress(userAddress);
-                setIsConnected(true);
-            },
-            userSession,
-        });
-    }, []);
-
     const disconnect = useCallback(() => {
-        userSession.signUserOut();
+        stacksDisconnect();
         setAddress(null);
         setIsConnected(false);
     }, []);
@@ -69,7 +78,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                 address,
                 connect,
                 disconnect,
-                userSession,
                 network: NETWORK,
             }}
         >

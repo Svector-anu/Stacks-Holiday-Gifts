@@ -1,61 +1,39 @@
 'use client';
 
 import { createAppKit } from '@reown/appkit/react';
-import { type AppKitNetwork } from '@reown/appkit/networks';
+import { mainnet } from '@reown/appkit/networks';
+import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
+import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode } from 'react';
 
 // Project ID from WalletConnect dashboard
 const projectId = 'efd6780756aafd33f978f50f927e4a34';
 
-// Stacks network configurations
-const stacksTestnet = {
-    id: 'stacks:testnet',
-    name: 'Stacks Testnet',
-    nativeCurrency: {
-        name: 'STX',
-        symbol: 'STX',
-        decimals: 6,
-    },
-    rpcUrls: {
-        default: { http: ['https://api.testnet.hiro.so'] },
-    },
-    blockExplorers: {
-        default: { name: 'Stacks Explorer', url: 'https://explorer.stacks.co/?chain=testnet' },
-    },
-} as AppKitNetwork;
-
-const stacksMainnet = {
-    id: 'stacks:mainnet',
-    name: 'Stacks Mainnet',
-    nativeCurrency: {
-        name: 'STX',
-        symbol: 'STX',
-        decimals: 6,
-    },
-    rpcUrls: {
-        default: { http: ['https://api.hiro.so'] },
-    },
-    blockExplorers: {
-        default: { name: 'Stacks Explorer', url: 'https://explorer.stacks.co' },
-    },
-} as AppKitNetwork;
-
-const networks: [AppKitNetwork, ...AppKitNetwork[]] = [stacksTestnet, stacksMainnet];
+// Use mainnet as the primary network (AppKit requires EVM-compatible network)
+const networks = [mainnet] as const;
 
 // Metadata for the app
 const metadata = {
     name: 'Stacks Holiday Gifts',
     description: 'Send STX gifts to friends and family for the holidays!',
-    url: 'https://stacks-holiday-gifts.vercel.app',
+    url: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
     icons: ['https://avatars.githubusercontent.com/u/37784886'],
 };
 
-// Create AppKit at module level - BEFORE any hooks are used
+// Create Wagmi Adapter
+const wagmiAdapter = new WagmiAdapter({
+    networks,
+    projectId,
+    ssr: true,
+});
+
+// Create AppKit at module level
 createAppKit({
+    adapters: [wagmiAdapter],
+    networks,
     projectId,
     metadata,
-    networks,
     features: {
         analytics: true,
         email: false,
@@ -72,8 +50,10 @@ const queryClient = new QueryClient();
 
 export function AppKitProvider({ children }: { children: ReactNode }) {
     return (
-        <QueryClientProvider client={queryClient}>
-            {children}
-        </QueryClientProvider>
+        <WagmiProvider config={wagmiAdapter.wagmiConfig}>
+            <QueryClientProvider client={queryClient}>
+                {children}
+            </QueryClientProvider>
+        </WagmiProvider>
     );
 }

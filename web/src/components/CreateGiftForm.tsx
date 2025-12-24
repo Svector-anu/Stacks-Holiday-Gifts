@@ -1,8 +1,15 @@
 'use client';
 
 import { useState } from 'react';
+import { useAppKitProvider } from '@reown/appkit/react';
 import { useWallet } from '@/context/WalletContext';
-import { createGift, generateSecret, generateGiftLink } from '@/lib/stacks';
+import {
+    generateSecret,
+    generateGiftLink,
+    stxToMicroStx,
+    CONTRACT_ADDRESS,
+    CONTRACT_NAME,
+} from '@/lib/stacks';
 
 interface CreateGiftFormProps {
     onGiftCreated?: (giftLink: string) => void;
@@ -10,6 +17,7 @@ interface CreateGiftFormProps {
 
 export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
     const { isConnected, address, connect } = useWallet();
+    const { walletProvider } = useAppKitProvider('bip122');
     const [amount, setAmount] = useState('');
     const [message, setMessage] = useState('');
     const [isCreating, setIsCreating] = useState(false);
@@ -18,7 +26,7 @@ export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!address) return;
+        if (!address || !walletProvider) return;
 
         setIsCreating(true);
         setError(null);
@@ -33,26 +41,29 @@ export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
                 return;
             }
 
-            await createGift(
-                address,
-                amountNum,
-                message || '🎁 Happy Holidays!',
-                secret,
-                (txId) => {
-                    // For now, we'll use a placeholder gift ID
-                    // In production, you'd query the contract for the actual ID
-                    const giftId = Date.now(); // Placeholder
-                    const link = generateGiftLink(giftId, secret);
-                    setGiftLink(link);
-                    setIsCreating(false);
-                    onGiftCreated?.(link);
-                },
-                () => {
-                    setError('Transaction cancelled');
-                    setIsCreating(false);
-                }
-            );
+            const amountMicroStx = stxToMicroStx(amountNum);
+
+            // Use AppKit's provider to call the contract
+            // For now, show a demo success since contract isn't deployed yet
+            const giftId = Date.now();
+            const link = generateGiftLink(giftId, secret);
+
+            // TODO: Once contract is deployed, use:
+            // const response = await walletProvider.request({
+            //   method: 'stx_callContract',
+            //   params: {
+            //     contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
+            //     functionName: 'create-gift',
+            //     functionArgs: [...],
+            //   },
+            // });
+
+            setGiftLink(link);
+            setIsCreating(false);
+            onGiftCreated?.(link);
+
         } catch (err) {
+            console.error('Failed to create gift:', err);
             setError('Failed to create gift. Please try again.');
             setIsCreating(false);
         }
@@ -162,6 +173,10 @@ export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
                     '🎁 Pack Your Gift'
                 )}
             </button>
+
+            <p className="text-xs text-center text-gray-500">
+                ⚠️ Contract not deployed yet - this is a demo. Deploy to testnet to enable real transactions.
+            </p>
         </form>
     );
 }

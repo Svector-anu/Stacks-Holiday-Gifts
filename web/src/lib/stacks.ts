@@ -1,4 +1,3 @@
-import { request } from '@stacks/connect';
 import {
     uintCV,
     stringUtf8CV,
@@ -23,7 +22,7 @@ export function generateSecret(): string {
 }
 
 // Simple hash function for the secret (browser compatible)
-async function sha256Hash(data: Uint8Array): Promise<Uint8Array> {
+export async function sha256Hash(data: Uint8Array): Promise<Uint8Array> {
     if (typeof window !== 'undefined' && window.crypto?.subtle) {
         const buffer = new ArrayBuffer(data.length);
         const view = new Uint8Array(buffer);
@@ -45,20 +44,13 @@ export function microStxToStx(microStx: bigint | number): number {
 }
 
 // Helper to serialize CV to hex
-function cvToHex(cv: ReturnType<typeof uintCV>): string {
+export function cvToHex(cv: ReturnType<typeof uintCV>): string {
     const serialized = serializeCV(cv);
     return Array.from(serialized, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-// Create a gift
-export async function createGift(
-    senderAddress: string,
-    amountStx: number,
-    message: string,
-    secret: string,
-    onFinish: (txId: string) => void,
-    onCancel: () => void
-) {
+// Helper to prepare create-gift arguments
+export async function prepareCreateGiftArgs(amountStx: number, message: string, secret: string) {
     const amountMicroStx = stxToMicroStx(amountStx);
 
     // Hash the secret
@@ -68,55 +60,32 @@ export async function createGift(
     paddedData.set(secretData.slice(0, 32));
     const secretHash = await sha256Hash(paddedData);
 
-    try {
-        const response = await request('stx_callContract', {
-            contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
-            functionName: 'create-gift',
-            functionArgs: [
-                cvToHex(uintCV(amountMicroStx)),
-                cvToHex(stringUtf8CV(message)),
-                cvToHex(bufferCV(secretHash)),
-            ],
-        });
-
-        if (response && response.txid) {
-            onFinish(response.txid);
-        }
-    } catch (error) {
-        console.error('Failed to create gift:', error);
-        onCancel();
-    }
+    return {
+        contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
+        functionName: 'create-gift',
+        functionArgs: [
+            cvToHex(uintCV(amountMicroStx)),
+            cvToHex(stringUtf8CV(message)),
+            cvToHex(bufferCV(secretHash)),
+        ],
+    };
 }
 
-// Claim a gift
-export async function claimGift(
-    giftId: number,
-    secret: string,
-    onFinish: (txId: string) => void,
-    onCancel: () => void
-) {
+// Helper to prepare claim-gift arguments
+export function prepareClaimGiftArgs(giftId: number, secret: string) {
     const encoder = new TextEncoder();
     const secretData = encoder.encode(secret);
     const paddedSecret = new Uint8Array(32);
     paddedSecret.set(secretData.slice(0, 32));
 
-    try {
-        const response = await request('stx_callContract', {
-            contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
-            functionName: 'claim-gift',
-            functionArgs: [
-                cvToHex(uintCV(giftId)),
-                cvToHex(bufferCV(paddedSecret)),
-            ],
-        });
-
-        if (response && response.txid) {
-            onFinish(response.txid);
-        }
-    } catch (error) {
-        console.error('Failed to claim gift:', error);
-        onCancel();
-    }
+    return {
+        contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
+        functionName: 'claim-gift',
+        functionArgs: [
+            cvToHex(uintCV(giftId)),
+            cvToHex(bufferCV(paddedSecret)),
+        ],
+    };
 }
 
 // Generate gift link

@@ -2,20 +2,54 @@
 
 import { createAppKit } from '@reown/appkit/react';
 import { BitcoinAdapter } from '@reown/appkit-adapter-bitcoin';
-import { bitcoin, bitcoinTestnet, stacks, stacksTestnet } from '@reown/appkit/networks';
+import { bitcoin, bitcoinTestnet } from '@reown/appkit/networks';
+import type { AppKitNetwork } from '@reown/appkit/networks';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode } from 'react';
 
 // Project ID from WalletConnect dashboard
 const projectId = 'efd6780756aafd33f978f50f927e4a34';
 
+// Define Stacks networks (CAIP-2 format)
+const stacksMainnet: AppKitNetwork = {
+    id: 'stacks:1',
+    name: 'Stacks',
+    nativeCurrency: {
+        name: 'STX',
+        symbol: 'STX',
+        decimals: 6,
+    },
+    rpcUrls: {
+        default: { http: ['https://api.hiro.so'] },
+    },
+    blockExplorers: {
+        default: { name: 'Stacks Explorer', url: 'https://explorer.stacks.co' },
+    },
+};
+
+const stacksTestnet: AppKitNetwork = {
+    id: 'stacks:2147483648',
+    name: 'Stacks Testnet',
+    nativeCurrency: {
+        name: 'STX',
+        symbol: 'STX',
+        decimals: 6,
+    },
+    rpcUrls: {
+        default: { http: ['https://api.testnet.hiro.so'] },
+    },
+    blockExplorers: {
+        default: { name: 'Stacks Explorer', url: 'https://explorer.stacks.co/?chain=testnet' },
+    },
+};
+
 // 1. Setup the Bitcoin Adapter (supports Stacks wallets like Leather & Xverse)
 const bitcoinAdapter = new BitcoinAdapter();
 
 // 2. Define networks - Stacks testnet for dev, mainnet for production
 const networks = process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
-    ? [stacks, bitcoin]
-    : [stacksTestnet, bitcoinTestnet];
+    ? [stacksMainnet, bitcoin] as [AppKitNetwork, ...AppKitNetwork[]]
+    : [stacksTestnet, bitcoinTestnet] as [AppKitNetwork, ...AppKitNetwork[]];
 
 // 3. Metadata for the app
 const metadata = {
@@ -28,15 +62,13 @@ const metadata = {
 // 4. Create AppKit with BitcoinAdapter
 createAppKit({
     adapters: [bitcoinAdapter],
-    networks: networks as any,
+    networks,
     projectId,
     metadata,
     features: {
         analytics: true,
         email: true, // Allow email login for new users
         socials: ['google', 'x', 'github'],
-        swaps: true, // Native swaps within the modal
-        onramp: true, // Native "Buy Crypto" flow
     },
     themeMode: 'dark',
     themeVariables: {

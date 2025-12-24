@@ -5,7 +5,7 @@ import {
     useAppKitAccount,
     useDisconnect,
 } from '@reown/appkit/react';
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode, useCallback } from 'react';
 
 // Network configuration
 const NETWORK = process.env.NEXT_PUBLIC_NETWORK === 'mainnet' ? 'mainnet' : 'testnet';
@@ -25,18 +25,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const { address, isConnected } = useAppKitAccount();
     const { disconnect: appKitDisconnect } = useDisconnect();
 
-    const connect = () => {
+    const connect = useCallback(() => {
         open();
-    };
+    }, [open]);
 
-    const disconnect = () => {
+    const disconnect = useCallback(() => {
         appKitDisconnect();
-    };
+    }, [appKitDisconnect]);
 
     return (
         <WalletContext.Provider
             value={{
-                isConnected,
+                isConnected: isConnected || false,
                 address: address || null,
                 connect,
                 disconnect,

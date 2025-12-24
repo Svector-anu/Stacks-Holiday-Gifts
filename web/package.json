@@ -11,6 +11,8 @@
   "dependencies": {
     "@reown/appkit": "^1.8.15",
     "@reown/appkit-adapter-wagmi": "^1.8.15",
+    "@reown/appkit-common": "^1.8.15",
+    "@reown/appkit-universal-connector": "^1.8.15",
     "@stacks/common": "^7.3.1",
     "@stacks/connect": "^8.2.4",
     "@stacks/network": "^7.3.1",

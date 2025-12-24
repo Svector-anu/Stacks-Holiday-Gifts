@@ -1,12 +1,11 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import {
-    connect as stacksConnect,
-    disconnect as stacksDisconnect,
-    isConnected as stacksIsConnected,
-    getLocalStorage,
-} from '@stacks/connect';
+    useAppKit,
+    useAppKitAccount,
+    useDisconnect,
+} from '@reown/appkit/react';
+import { createContext, useContext, ReactNode } from 'react';
 
 // Network configuration
 const NETWORK = process.env.NEXT_PUBLIC_NETWORK === 'mainnet' ? 'mainnet' : 'testnet';
@@ -14,7 +13,7 @@ const NETWORK = process.env.NEXT_PUBLIC_NETWORK === 'mainnet' ? 'mainnet' : 'tes
 interface WalletContextType {
     isConnected: boolean;
     address: string | null;
-    connect: () => Promise<void>;
+    connect: () => void;
     disconnect: () => void;
     network: string;
 }
@@ -22,60 +21,23 @@ interface WalletContextType {
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-    const [isConnected, setIsConnected] = useState(false);
-    const [address, setAddress] = useState<string | null>(null);
+    const { open } = useAppKit();
+    const { address, isConnected } = useAppKitAccount();
+    const { disconnect: appKitDisconnect } = useDisconnect();
 
-    // Check if already connected on mount
-    useEffect(() => {
-        const checkConnection = async () => {
-            try {
-                const connected = stacksIsConnected();
-                if (connected) {
-                    const storage = getLocalStorage();
-                    if (storage?.addresses?.stx) {
-                        const addresses = storage.addresses.stx;
-                        const addr = addresses.find((a: { symbol: string }) => a.symbol === 'STX');
-                        if (addr) {
-                            setAddress(addr.address);
-                            setIsConnected(true);
-                        }
-                    }
-                }
-            } catch (e) {
-                console.log('Not connected yet');
-            }
-        };
-        checkConnection();
-    }, []);
+    const connect = () => {
+        open();
+    };
 
-    const connect = useCallback(async () => {
-        try {
-            const response = await stacksConnect();
-            if (response && response.addresses) {
-                const stxAddress = response.addresses.find(
-                    (addr: { symbol: string }) => addr.symbol === 'STX'
-                );
-                if (stxAddress) {
-                    setAddress(stxAddress.address);
-                    setIsConnected(true);
-                }
-            }
-        } catch (error) {
-            console.error('Failed to connect wallet:', error);
-        }
-    }, []);
-
-    const disconnect = useCallback(() => {
-        stacksDisconnect();
-        setAddress(null);
-        setIsConnected(false);
-    }, []);
+    const disconnect = () => {
+        appKitDisconnect();
+    };
 
     return (
         <WalletContext.Provider
             value={{
                 isConnected,
-                address,
+                address: address || null,
                 connect,
                 disconnect,
                 network: NETWORK,

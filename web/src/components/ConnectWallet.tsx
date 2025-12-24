@@ -1,9 +1,11 @@
 'use client';
 
+import { useAppKit } from '@reown/appkit/react';
 import { useWallet } from '@/context/WalletContext';
 
 export default function ConnectWallet() {
-    const { isConnected, address, connect, disconnect } = useWallet();
+    const { isConnected, address, disconnect } = useWallet();
+    const { open } = useAppKit();
 
     if (isConnected && address) {
         return (
@@ -23,7 +25,7 @@ export default function ConnectWallet() {
 
     return (
         <button
-            onClick={connect}
+            onClick={() => open()}
             className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all font-medium shadow-lg shadow-orange-500/20"
         >
             Connect Wallet

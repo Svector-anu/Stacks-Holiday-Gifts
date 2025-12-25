@@ -10,46 +10,12 @@ import { ReactNode } from 'react';
 // Project ID from WalletConnect dashboard
 const projectId = 'efd6780756aafd33f978f50f927e4a34';
 
-// Define Stacks networks (CAIP-2 format)
-const stacksMainnet: AppKitNetwork = {
-    id: 'stacks:1',
-    name: 'Stacks',
-    nativeCurrency: {
-        name: 'STX',
-        symbol: 'STX',
-        decimals: 6,
-    },
-    rpcUrls: {
-        default: { http: ['https://api.hiro.so'] },
-    },
-    blockExplorers: {
-        default: { name: 'Stacks Explorer', url: 'https://explorer.stacks.co' },
-    },
-};
-
-const stacksTestnet: AppKitNetwork = {
-    id: 'stacks:2147483648',
-    name: 'Stacks Testnet',
-    nativeCurrency: {
-        name: 'STX',
-        symbol: 'STX',
-        decimals: 6,
-    },
-    rpcUrls: {
-        default: { http: ['https://api.testnet.hiro.so'] },
-    },
-    blockExplorers: {
-        default: { name: 'Stacks Explorer', url: 'https://explorer.stacks.co/?chain=testnet' },
-    },
-};
-
 // 1. Setup the Bitcoin Adapter (supports Stacks wallets like Leather & Xverse)
 const bitcoinAdapter = new BitcoinAdapter();
 
-// 2. Define networks - Stacks testnet for dev, mainnet for production
-const networks = process.env.NEXT_PUBLIC_NETWORK === 'mainnet'
-    ? [stacksMainnet, bitcoin] as [AppKitNetwork, ...AppKitNetwork[]]
-    : [stacksTestnet, bitcoinTestnet] as [AppKitNetwork, ...AppKitNetwork[]];
+// 2. Use only Bitcoin networks (AppKit doesn't fully support custom Stacks chains yet)
+// Stacks wallets like Leather/Xverse will still connect via Bitcoin adapter
+const networks: [AppKitNetwork, ...AppKitNetwork[]] = [bitcoinTestnet, bitcoin];
 
 // 3. Metadata for the app
 const metadata = {
@@ -67,7 +33,7 @@ createAppKit({
     metadata,
     features: {
         analytics: true,
-        email: true, // Allow email login for new users
+        email: true,
         socials: ['google', 'x', 'github'],
     },
     themeMode: 'dark',

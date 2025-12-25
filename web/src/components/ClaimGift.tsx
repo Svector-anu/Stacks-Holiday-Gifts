@@ -1,8 +1,17 @@
 'use client';
 
 import { useState } from 'react';
+import { useAppKitProvider } from '@reown/appkit/react';
 import { useWallet } from '@/context/WalletContext';
-import { claimGift } from '@/lib/stacks';
+import {
+    cvToHex,
+    CONTRACT_ADDRESS,
+    CONTRACT_NAME,
+} from '@/lib/stacks';
+import {
+    uintCV,
+    bufferCV,
+} from '@stacks/transactions';
 
 interface ClaimGiftProps {
     giftId: number;
@@ -11,35 +20,56 @@ interface ClaimGiftProps {
     amount?: number;
 }
 
+// Bitcoin Provider interface for Stacks calls
+interface BitcoinProvider {
+    request: (args: { method: string; params: unknown }) => Promise<unknown>;
+}
+
 export default function ClaimGift({ giftId, secret, message, amount }: ClaimGiftProps) {
     const { isConnected, address, connect } = useWallet();
+    const { walletProvider } = useAppKitProvider<BitcoinProvider>('bip122');
     const [isClaiming, setIsClaiming] = useState(false);
     const [claimed, setClaimed] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [txId, setTxId] = useState<string | null>(null);
 
     const handleClaim = async () => {
-        if (!address) return;
+        if (!address || !walletProvider) return;
 
         setIsClaiming(true);
         setError(null);
 
         try {
-            await claimGift(
-                giftId,
-                secret,
-                (txId) => {
-                    setTxId(txId);
-                    setClaimed(true);
-                    setIsClaiming(false);
+            // Prepare secret for contract
+            const encoder = new TextEncoder();
+            const secretData = encoder.encode(secret);
+            const paddedSecret = new Uint8Array(32);
+            paddedSecret.set(secretData.slice(0, 32));
+
+            // Call the claim-gift function via WalletConnect
+            const response = await walletProvider.request({
+                method: 'stx_callContract',
+                params: {
+                    contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
+                    functionName: 'claim-gift',
+                    functionArgs: [
+                        cvToHex(uintCV(giftId)),
+                        cvToHex(bufferCV(paddedSecret)),
+                    ],
                 },
-                () => {
-                    setError('Transaction cancelled');
-                    setIsClaiming(false);
-                }
-            );
-        } catch (err) {
-            setError('Failed to claim gift. It may have already been claimed.');
+            }) as { txid?: string };
+
+            if (response && response.txid) {
+                setTxId(response.txid);
+                setClaimed(true);
+            } else {
+                setError('Transaction was not completed');
+            }
+            setIsClaiming(false);
+        } catch (err: unknown) {
+            console.error('Failed to claim gift:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Failed to claim gift. It may have already been claimed.';
+            setError(errorMessage);
             setIsClaiming(false);
         }
     };

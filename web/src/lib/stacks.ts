@@ -2,7 +2,6 @@ import {
     uintCV,
     stringUtf8CV,
     bufferCV,
-    serializeCV,
 } from '@stacks/transactions';
 
 // Contract configuration - DEPLOYED TO TESTNET
@@ -41,51 +40,6 @@ export function stxToMicroStx(stx: number): bigint {
 // Convert microSTX to STX
 export function microStxToStx(microStx: bigint | number): number {
     return Number(microStx) / 1_000_000;
-}
-
-// Helper to serialize CV to hex
-export function cvToHex(cv: ReturnType<typeof uintCV>): string {
-    const serialized = serializeCV(cv);
-    return Array.from(serialized, byte => byte.toString(16).padStart(2, '0')).join('');
-}
-
-// Helper to prepare create-gift arguments
-export async function prepareCreateGiftArgs(amountStx: number, message: string, secret: string) {
-    const amountMicroStx = stxToMicroStx(amountStx);
-
-    // Hash the secret
-    const encoder = new TextEncoder();
-    const secretData = encoder.encode(secret);
-    const paddedData = new Uint8Array(32);
-    paddedData.set(secretData.slice(0, 32));
-    const secretHash = await sha256Hash(paddedData);
-
-    return {
-        contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
-        functionName: 'create-gift',
-        functionArgs: [
-            cvToHex(uintCV(amountMicroStx)),
-            cvToHex(stringUtf8CV(message)),
-            cvToHex(bufferCV(secretHash)),
-        ],
-    };
-}
-
-// Helper to prepare claim-gift arguments
-export function prepareClaimGiftArgs(giftId: number, secret: string) {
-    const encoder = new TextEncoder();
-    const secretData = encoder.encode(secret);
-    const paddedSecret = new Uint8Array(32);
-    paddedSecret.set(secretData.slice(0, 32));
-
-    return {
-        contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
-        functionName: 'claim-gift',
-        functionArgs: [
-            cvToHex(uintCV(giftId)),
-            cvToHex(bufferCV(paddedSecret)),
-        ],
-    };
 }
 
 // Generate gift link

@@ -62,6 +62,7 @@ export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
             const secretHash = await sha256Hash(paddedData);
 
             // Use @stacks/connect request method for contract call
+            // postConditionMode: 'allow' permits STX transfers without explicit post-conditions
             const response = await request('stx_callContract', {
                 contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
                 functionName: 'create-gift',
@@ -70,6 +71,7 @@ export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
                     cvToHex(stringUtf8CV(message || 'Happy Holidays! 🎁')),
                     cvToHex(bufferCV(secretHash)),
                 ],
+                postConditionMode: 'allow',
             });
 
             if (response && response.txid) {

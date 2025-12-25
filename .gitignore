@@ -1,7 +1,17 @@
+# Sensitive files - DO NOT PUSH
 **/settings/Mainnet.toml
 **/settings/Testnet.toml
+**/deployments/*.testnet.yaml
+**/deployments/*.mainnet.yaml
+**/deployments/default.*.yaml
 .cache/**
 history.txt
+*.seed
+*.key
+*.secret
+.env
+.env.local
+.env.*.local
 
 logs
 *.log

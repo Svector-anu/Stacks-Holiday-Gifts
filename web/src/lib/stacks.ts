@@ -5,8 +5,8 @@ import {
     serializeCV,
 } from '@stacks/transactions';
 
-// Contract configuration
-export const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM';
+// Contract configuration - DEPLOYED TO TESTNET
+export const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || 'ST3J1V2ZNMJRPYMYPJ8Q2NYHD8XW2V5KCMJ5GN9Z2';
 export const CONTRACT_NAME = 'gift-escrow';
 
 // Network

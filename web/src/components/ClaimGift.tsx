@@ -1,10 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useAppKitProvider } from '@reown/appkit/react';
+import { request } from '@stacks/connect';
 import { useWallet } from '@/context/WalletContext';
 import {
-    cvToHex,
     CONTRACT_ADDRESS,
     CONTRACT_NAME,
 } from '@/lib/stacks';
@@ -20,21 +19,15 @@ interface ClaimGiftProps {
     amount?: number;
 }
 
-// Bitcoin Provider interface for Stacks calls
-interface BitcoinProvider {
-    request: (args: { method: string; params: unknown }) => Promise<unknown>;
-}
-
 export default function ClaimGift({ giftId, secret, message, amount }: ClaimGiftProps) {
     const { isConnected, address, connect } = useWallet();
-    const { walletProvider } = useAppKitProvider<BitcoinProvider>('bip122');
     const [isClaiming, setIsClaiming] = useState(false);
     const [claimed, setClaimed] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [txId, setTxId] = useState<string | null>(null);
 
     const handleClaim = async () => {
-        if (!address || !walletProvider) return;
+        if (!address) return;
 
         setIsClaiming(true);
         setError(null);
@@ -46,17 +39,15 @@ export default function ClaimGift({ giftId, secret, message, amount }: ClaimGift
             const paddedSecret = new Uint8Array(32);
             paddedSecret.set(secretData.slice(0, 32));
 
-            // Call the claim-gift function via WalletConnect
-            const response = await walletProvider.request({
-                method: 'stx_callContract',
-                params: {
-                    contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
-                    functionName: 'claim-gift',
-                    functionArgs: [
-                        cvToHex(uintCV(giftId)),
-                        cvToHex(bufferCV(paddedSecret)),
-                    ],
-                },
+            // Call claim-gift via @stacks/connect
+            const response = await request('stx_callContract', {
+                contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
+                functionName: 'claim-gift',
+                functionArgs: [
+                    uintCV(giftId),
+                    bufferCV(paddedSecret),
+                ],
+                postConditionMode: 'allow',
             }) as { txid?: string };
 
             if (response && response.txid) {

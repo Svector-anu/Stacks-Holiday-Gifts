@@ -80,9 +80,9 @@ export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
                 contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
                 functionName: 'create-gift',
                 functionArgs: [
-                    cvToHex(uintCV(amountMicroStx)),
-                    cvToHex(stringUtf8CV(message || 'Happy Holidays! 🎁')),
-                    cvToHex(bufferCV(secretHash)),
+                    uintCV(amountMicroStx),
+                    stringUtf8CV(message || 'Happy Holidays! 🎁'),
+                    bufferCV(secretHash),
                 ],
                 postConditionMode: 'allow',
             });

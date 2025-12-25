@@ -53,9 +53,10 @@ export default function ClaimPage() {
                 contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
                 functionName: 'claim-gift',
                 functionArgs: [
-                    cvToHex(uintCV(parseInt(giftId) || 0)),
-                    cvToHex(bufferCV(paddedSecret)),
+                    uintCV(parseInt(giftId) || 0),
+                    bufferCV(paddedSecret),
                 ],
+                postConditionMode: 'allow',
             });
 
             if (response && response.txid) {

@@ -8,19 +8,21 @@ export default function ConnectWallet() {
     if (isConnected && address) {
         return (
             <div className="flex items-center gap-3">
-                {/* Balance Display */}
-                <div className="hidden sm:flex flex-col items-end">
-                    <span className="text-xs text-gray-400">Balance</span>
-                    <span className="text-sm font-semibold text-orange-400">
-                        {isLoadingBalance ? (
-                            <span className="animate-pulse">Loading...</span>
-                        ) : balance !== null ? (
-                            `${balance.toFixed(2)} STX`
-                        ) : (
-                            '-- STX'
-                        )}
-                    </span>
-                </div>
+                {/* Balance Display - only show for Stacks addresses */}
+                {(address.startsWith('ST') || address.startsWith('SP')) && (
+                    <div className="hidden sm:flex flex-col items-end">
+                        <span className="text-xs text-gray-400">Balance</span>
+                        <span className="text-sm font-semibold text-orange-400">
+                            {isLoadingBalance ? (
+                                <span className="animate-pulse">Loading...</span>
+                            ) : balance !== null ? (
+                                `${balance.toFixed(2)} STX`
+                            ) : (
+                                '-- STX'
+                            )}
+                        </span>
+                    </div>
+                )}
 
                 {/* Address Display */}
                 <div className="flex items-center gap-2 glass px-4 py-2 rounded-xl">

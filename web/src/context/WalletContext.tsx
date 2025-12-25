@@ -36,6 +36,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             return;
         }
 
+        // Only fetch balance for Stacks addresses (start with ST or SP)
+        if (!address.startsWith('ST') && !address.startsWith('SP')) {
+            console.log('Not a Stacks address, skipping balance fetch:', address);
+            setBalance(null);
+            return;
+        }
+
         setIsLoadingBalance(true);
         try {
             const apiUrl = NETWORK === 'mainnet'
@@ -43,14 +50,24 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                 : 'https://api.testnet.hiro.so';
 
             const response = await fetch(`${apiUrl}/extended/v1/address/${address}/stx`);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const data = await response.json();
 
-            // Convert microSTX to STX
-            const stxBalance = parseInt(data.balance) / 1_000_000;
-            setBalance(stxBalance);
+            // Validate response has balance field
+            if (data && typeof data.balance === 'string') {
+                const stxBalance = parseInt(data.balance) / 1_000_000;
+                setBalance(stxBalance);
+            } else {
+                console.error('Invalid balance data:', data);
+                setBalance(0);
+            }
         } catch (error) {
             console.error('Failed to fetch balance:', error);
-            setBalance(null);
+            setBalance(0);
         } finally {
             setIsLoadingBalance(false);
         }

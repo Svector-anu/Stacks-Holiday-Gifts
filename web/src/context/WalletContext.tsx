@@ -5,7 +5,7 @@ import {
     useAppKitAccount,
     useDisconnect,
 } from '@reown/appkit/react';
-import { createContext, useContext, ReactNode, useCallback } from 'react';
+import { createContext, useContext, ReactNode, useCallback, useState, useEffect } from 'react';
 
 // Network configuration
 const NETWORK = process.env.NEXT_PUBLIC_NETWORK === 'mainnet' ? 'mainnet' : 'testnet';
@@ -13,9 +13,12 @@ const NETWORK = process.env.NEXT_PUBLIC_NETWORK === 'mainnet' ? 'mainnet' : 'tes
 interface WalletContextType {
     isConnected: boolean;
     address: string | null;
+    balance: number | null;
+    isLoadingBalance: boolean;
     connect: () => void;
     disconnect: () => void;
     network: string;
+    refreshBalance: () => Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -24,6 +27,42 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const { open } = useAppKit();
     const { address, isConnected } = useAppKitAccount();
     const { disconnect: appKitDisconnect } = useDisconnect();
+    const [balance, setBalance] = useState<number | null>(null);
+    const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+
+    const fetchBalance = useCallback(async () => {
+        if (!address) {
+            setBalance(null);
+            return;
+        }
+
+        setIsLoadingBalance(true);
+        try {
+            const apiUrl = NETWORK === 'mainnet'
+                ? 'https://api.hiro.so'
+                : 'https://api.testnet.hiro.so';
+
+            const response = await fetch(`${apiUrl}/extended/v1/address/${address}/stx`);
+            const data = await response.json();
+
+            // Convert microSTX to STX
+            const stxBalance = parseInt(data.balance) / 1_000_000;
+            setBalance(stxBalance);
+        } catch (error) {
+            console.error('Failed to fetch balance:', error);
+            setBalance(null);
+        } finally {
+            setIsLoadingBalance(false);
+        }
+    }, [address]);
+
+    useEffect(() => {
+        if (isConnected && address) {
+            fetchBalance();
+        } else {
+            setBalance(null);
+        }
+    }, [isConnected, address, fetchBalance]);
 
     const connect = useCallback(() => {
         open();
@@ -31,6 +70,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     const disconnect = useCallback(() => {
         appKitDisconnect();
+        setBalance(null);
     }, [appKitDisconnect]);
 
     return (
@@ -38,9 +78,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             value={{
                 isConnected: isConnected || false,
                 address: address || null,
+                balance,
+                isLoadingBalance,
                 connect,
                 disconnect,
                 network: NETWORK,
+                refreshBalance: fetchBalance,
             }}
         >
             {children}

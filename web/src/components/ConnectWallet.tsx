@@ -1,21 +1,39 @@
 'use client';
 
-import { useAppKit } from '@reown/appkit/react';
 import { useWallet } from '@/context/WalletContext';
 
 export default function ConnectWallet() {
-    const { isConnected, address, disconnect } = useWallet();
-    const { open } = useAppKit();
+    const { isConnected, address, balance, isLoadingBalance, connect, disconnect } = useWallet();
 
     if (isConnected && address) {
         return (
             <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-300 hidden sm:inline">
-                    {address.slice(0, 6)}...{address.slice(-4)}
-                </span>
+                {/* Balance Display */}
+                <div className="hidden sm:flex flex-col items-end">
+                    <span className="text-xs text-gray-400">Balance</span>
+                    <span className="text-sm font-semibold text-orange-400">
+                        {isLoadingBalance ? (
+                            <span className="animate-pulse">Loading...</span>
+                        ) : balance !== null ? (
+                            `${balance.toFixed(2)} STX`
+                        ) : (
+                            '-- STX'
+                        )}
+                    </span>
+                </div>
+
+                {/* Address Display */}
+                <div className="flex items-center gap-2 glass px-4 py-2 rounded-xl">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                    <span className="text-sm font-mono">
+                        {address.slice(0, 6)}...{address.slice(-4)}
+                    </span>
+                </div>
+
+                {/* Disconnect Button */}
                 <button
                     onClick={disconnect}
-                    className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors text-sm font-medium"
+                    className="px-4 py-2 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-all text-sm font-medium"
                 >
                     Disconnect
                 </button>
@@ -25,8 +43,8 @@ export default function ConnectWallet() {
 
     return (
         <button
-            onClick={() => open()}
-            className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all font-medium shadow-lg shadow-orange-500/20"
+            onClick={connect}
+            className="px-6 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 transition-all font-semibold shadow-lg shadow-orange-500/20"
         >
             Connect Wallet
         </button>

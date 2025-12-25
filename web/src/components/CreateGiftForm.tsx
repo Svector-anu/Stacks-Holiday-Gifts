@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { request } from '@stacks/connect';
 import { useWallet } from '@/context/WalletContext';
+import GiftInviteCard from '@/components/GiftInviteCard';
 import {
     generateSecret,
     generateGiftLink,
@@ -23,12 +24,14 @@ interface CreateGiftFormProps {
 }
 
 export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
-    const { isConnected, address, connect } = useWallet();
+    const { isConnected, address, balance, connect } = useWallet();
     const [amount, setAmount] = useState('');
     const [message, setMessage] = useState('');
     const [isCreating, setIsCreating] = useState(false);
     const [giftLink, setGiftLink] = useState<string | null>(null);
     const [giftSecret, setGiftSecret] = useState<string | null>(null);
+    const [giftAmount, setGiftAmount] = useState<number>(0);
+    const [giftMessage, setGiftMessage] = useState<string>('');
     const [txId, setTxId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -47,7 +50,17 @@ export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
             const amountNum = parseFloat(amount);
 
             if (isNaN(amountNum) || amountNum <= 0) {
-                setError('Please enter a valid amount');
+                setError('⚠️ Please enter a valid amount greater than 0');
+                setIsCreating(false);
+                return;
+            }
+
+            // Check if user has enough balance (including 0.5% fee)
+            const feeAmount = amountNum * 0.005;
+            const totalNeeded = amountNum + feeAmount;
+
+            if (balance !== null && balance < totalNeeded) {
+                setError(`❌ Insufficient balance. You need ${totalNeeded.toFixed(6)} STX (including 0.5% fee) but only have ${balance.toFixed(6)} STX`);
                 setIsCreating(false);
                 return;
             }
@@ -82,6 +95,8 @@ export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
                 setTxId(response.txid);
                 setGiftLink(link);
                 setGiftSecret(secret);
+                setGiftAmount(amountNum);
+                setGiftMessage(message);
                 onGiftCreated?.(link, secret);
             } else {
                 setError('Transaction was not completed');
@@ -114,48 +129,30 @@ export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
 
     if (giftLink && giftSecret) {
         return (
-            <div className="text-center py-8">
-                <div className="text-6xl mb-4">✨</div>
-                <h2 className="text-2xl font-bold text-white mb-4">Gift Created!</h2>
-
-                <div className="bg-gray-800/50 rounded-xl p-6 mb-6">
-                    <p className="text-gray-400 mb-2 text-sm">Share this secret message with your recipient:</p>
-                    <div className="bg-gray-900 rounded-lg p-4 mb-4">
-                        <code className="text-orange-400 text-lg font-mono break-all">{giftSecret}</code>
-                    </div>
+            <div>
+                <GiftInviteCard
+                    giftId={Date.now()}
+                    secret={giftSecret}
+                    amount={giftAmount}
+                    message={giftMessage}
+                    txId={txId || undefined}
+                />
+                <div className="text-center mt-6">
                     <button
-                        onClick={() => navigator.clipboard.writeText(giftSecret)}
-                        className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
+                        onClick={() => {
+                            setGiftLink(null);
+                            setGiftSecret(null);
+                            setGiftAmount(0);
+                            setGiftMessage('');
+                            setTxId(null);
+                            setAmount('');
+                            setMessage('');
+                        }}
+                        className="px-6 py-3 bg-gray-700 text-white rounded-xl hover:bg-gray-600 transition-colors font-medium"
                     >
-                        Copy Secret 📋
+                        Create Another Gift 🎁
                     </button>
                 </div>
-
-                {txId && (
-                    <p className="text-xs text-gray-500 mb-6">
-                        <a
-                            href={`https://explorer.stacks.co/txid/${txId}?chain=testnet`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-orange-400 hover:underline"
-                        >
-                            View transaction on explorer →
-                        </a>
-                    </p>
-                )}
-
-                <button
-                    onClick={() => {
-                        setGiftLink(null);
-                        setGiftSecret(null);
-                        setTxId(null);
-                        setAmount('');
-                        setMessage('');
-                    }}
-                    className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
-                >
-                    Create Another 🎁
-                </button>
             </div>
         );
     }

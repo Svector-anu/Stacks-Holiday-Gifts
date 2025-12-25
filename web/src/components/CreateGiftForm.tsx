@@ -7,26 +7,42 @@ import {
     generateSecret,
     generateGiftLink,
     stxToMicroStx,
+    sha256Hash,
+    cvToHex,
     CONTRACT_ADDRESS,
     CONTRACT_NAME,
 } from '@/lib/stacks';
+import {
+    uintCV,
+    stringUtf8CV,
+    bufferCV,
+} from '@stacks/transactions';
 
 interface CreateGiftFormProps {
     onGiftCreated?: (giftLink: string) => void;
 }
 
+// Bitcoin Provider interface for Stacks calls
+interface BitcoinProvider {
+    request: (args: { method: string; params: unknown }) => Promise<unknown>;
+}
+
 export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
     const { isConnected, address, connect } = useWallet();
-    const { walletProvider } = useAppKitProvider('bip122');
+    const { walletProvider } = useAppKitProvider<BitcoinProvider>('bip122');
     const [amount, setAmount] = useState('');
     const [message, setMessage] = useState('');
     const [isCreating, setIsCreating] = useState(false);
     const [giftLink, setGiftLink] = useState<string | null>(null);
+    const [txId, setTxId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!address || !walletProvider) return;
+        if (!address || !walletProvider) {
+            setError('Please connect your wallet first');
+            return;
+        }
 
         setIsCreating(true);
         setError(null);
@@ -43,28 +59,45 @@ export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
 
             const amountMicroStx = stxToMicroStx(amountNum);
 
-            // Use AppKit's provider to call the contract
-            // For now, show a demo success since contract isn't deployed yet
-            const giftId = Date.now();
-            const link = generateGiftLink(giftId, secret);
+            // Hash the secret for the contract
+            const encoder = new TextEncoder();
+            const secretData = encoder.encode(secret);
+            const paddedData = new Uint8Array(32);
+            paddedData.set(secretData.slice(0, 32));
+            const secretHash = await sha256Hash(paddedData);
 
-            // TODO: Once contract is deployed, use:
-            // const response = await walletProvider.request({
-            //   method: 'stx_callContract',
-            //   params: {
-            //     contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
-            //     functionName: 'create-gift',
-            //     functionArgs: [...],
-            //   },
-            // });
+            // Call the contract via WalletConnect Stacks RPC
+            const response = await walletProvider.request({
+                method: 'stx_callContract',
+                params: {
+                    contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
+                    functionName: 'create-gift',
+                    functionArgs: [
+                        cvToHex(uintCV(amountMicroStx)),
+                        cvToHex(stringUtf8CV(message || 'Happy Holidays! 🎁')),
+                        cvToHex(bufferCV(secretHash)),
+                    ],
+                },
+            }) as { txid?: string };
 
-            setGiftLink(link);
+            if (response && response.txid) {
+                // Gift created successfully
+                // For now, use timestamp as giftId since we don't have the actual ID from chain yet
+                const giftId = Date.now();
+                const link = generateGiftLink(giftId, secret);
+
+                setTxId(response.txid);
+                setGiftLink(link);
+                onGiftCreated?.(link);
+            } else {
+                setError('Transaction was not completed');
+            }
+
             setIsCreating(false);
-            onGiftCreated?.(link);
-
-        } catch (err) {
+        } catch (err: unknown) {
             console.error('Failed to create gift:', err);
-            setError('Failed to create gift. Please try again.');
+            const errorMessage = err instanceof Error ? err.message : 'Failed to create gift. Please try again.';
+            setError(errorMessage);
             setIsCreating(false);
         }
     };
@@ -90,10 +123,25 @@ export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
             <div className="text-center py-8">
                 <div className="text-6xl mb-4">✨</div>
                 <h2 className="text-2xl font-bold text-white mb-4">Gift Created!</h2>
-                <p className="text-gray-400 mb-6">Share this link with your recipient:</p>
-                <div className="bg-gray-800/50 rounded-xl p-4 mb-6 break-all">
+                <p className="text-gray-400 mb-4">Share this link with your recipient:</p>
+
+                <div className="bg-gray-800/50 rounded-xl p-4 mb-4 break-all">
                     <code className="text-orange-400 text-sm">{giftLink}</code>
                 </div>
+
+                {txId && (
+                    <p className="text-xs text-gray-500 mb-4">
+                        <a
+                            href={`https://explorer.stacks.co/txid/${txId}?chain=testnet`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-orange-400 hover:underline"
+                        >
+                            View transaction on explorer →
+                        </a>
+                    </p>
+                )}
+
                 <div className="flex gap-3 justify-center">
                     <button
                         onClick={() => navigator.clipboard.writeText(giftLink)}
@@ -104,6 +152,7 @@ export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
                     <button
                         onClick={() => {
                             setGiftLink(null);
+                            setTxId(null);
                             setAmount('');
                             setMessage('');
                         }}
@@ -175,7 +224,7 @@ export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
             </button>
 
             <p className="text-xs text-center text-gray-500">
-                ⚠️ Contract not deployed yet - this is a demo. Deploy to testnet to enable real transactions.
+                Contract: <code className="text-orange-400">{CONTRACT_ADDRESS}.{CONTRACT_NAME}</code>
             </p>
         </form>
     );

@@ -1,14 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useAppKitProvider } from '@reown/appkit/react';
+import { request } from '@stacks/connect';
 import { useWallet } from '@/context/WalletContext';
 import {
     generateSecret,
     generateGiftLink,
     stxToMicroStx,
     sha256Hash,
-    cvToHex,
     CONTRACT_ADDRESS,
     CONTRACT_NAME,
 } from '@/lib/stacks';
@@ -16,30 +15,26 @@ import {
     uintCV,
     stringUtf8CV,
     bufferCV,
+    cvToHex,
 } from '@stacks/transactions';
 
 interface CreateGiftFormProps {
-    onGiftCreated?: (giftLink: string) => void;
-}
-
-// Bitcoin Provider interface for Stacks calls
-interface BitcoinProvider {
-    request: (args: { method: string; params: unknown }) => Promise<unknown>;
+    onGiftCreated?: (giftLink: string, secret: string) => void;
 }
 
 export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
     const { isConnected, address, connect } = useWallet();
-    const { walletProvider } = useAppKitProvider<BitcoinProvider>('bip122');
     const [amount, setAmount] = useState('');
     const [message, setMessage] = useState('');
     const [isCreating, setIsCreating] = useState(false);
     const [giftLink, setGiftLink] = useState<string | null>(null);
+    const [giftSecret, setGiftSecret] = useState<string | null>(null);
     const [txId, setTxId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!address || !walletProvider) {
+        if (!address) {
             setError('Please connect your wallet first');
             return;
         }
@@ -66,29 +61,26 @@ export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
             paddedData.set(secretData.slice(0, 32));
             const secretHash = await sha256Hash(paddedData);
 
-            // Call the contract via WalletConnect Stacks RPC
-            const response = await walletProvider.request({
-                method: 'stx_callContract',
-                params: {
-                    contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
-                    functionName: 'create-gift',
-                    functionArgs: [
-                        cvToHex(uintCV(amountMicroStx)),
-                        cvToHex(stringUtf8CV(message || 'Happy Holidays! 🎁')),
-                        cvToHex(bufferCV(secretHash)),
-                    ],
-                },
-            }) as { txid?: string };
+            // Use @stacks/connect request method for contract call
+            const response = await request('stx_callContract', {
+                contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
+                functionName: 'create-gift',
+                functionArgs: [
+                    cvToHex(uintCV(amountMicroStx)),
+                    cvToHex(stringUtf8CV(message || 'Happy Holidays! 🎁')),
+                    cvToHex(bufferCV(secretHash)),
+                ],
+            });
 
             if (response && response.txid) {
-                // Gift created successfully
-                // For now, use timestamp as giftId since we don't have the actual ID from chain yet
+                // Gift created successfully - use timestamp as temp giftId
                 const giftId = Date.now();
                 const link = generateGiftLink(giftId, secret);
 
                 setTxId(response.txid);
                 setGiftLink(link);
-                onGiftCreated?.(link);
+                setGiftSecret(secret);
+                onGiftCreated?.(link, secret);
             } else {
                 setError('Transaction was not completed');
             }
@@ -118,19 +110,27 @@ export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
         );
     }
 
-    if (giftLink) {
+    if (giftLink && giftSecret) {
         return (
             <div className="text-center py-8">
                 <div className="text-6xl mb-4">✨</div>
                 <h2 className="text-2xl font-bold text-white mb-4">Gift Created!</h2>
-                <p className="text-gray-400 mb-4">Share this link with your recipient:</p>
 
-                <div className="bg-gray-800/50 rounded-xl p-4 mb-4 break-all">
-                    <code className="text-orange-400 text-sm">{giftLink}</code>
+                <div className="bg-gray-800/50 rounded-xl p-6 mb-6">
+                    <p className="text-gray-400 mb-2 text-sm">Share this secret message with your recipient:</p>
+                    <div className="bg-gray-900 rounded-lg p-4 mb-4">
+                        <code className="text-orange-400 text-lg font-mono break-all">{giftSecret}</code>
+                    </div>
+                    <button
+                        onClick={() => navigator.clipboard.writeText(giftSecret)}
+                        className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
+                    >
+                        Copy Secret 📋
+                    </button>
                 </div>
 
                 {txId && (
-                    <p className="text-xs text-gray-500 mb-4">
+                    <p className="text-xs text-gray-500 mb-6">
                         <a
                             href={`https://explorer.stacks.co/txid/${txId}?chain=testnet`}
                             target="_blank"
@@ -142,25 +142,18 @@ export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
                     </p>
                 )}
 
-                <div className="flex gap-3 justify-center">
-                    <button
-                        onClick={() => navigator.clipboard.writeText(giftLink)}
-                        className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium"
-                    >
-                        Copy Link 📋
-                    </button>
-                    <button
-                        onClick={() => {
-                            setGiftLink(null);
-                            setTxId(null);
-                            setAmount('');
-                            setMessage('');
-                        }}
-                        className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
-                    >
-                        Create Another 🎁
-                    </button>
-                </div>
+                <button
+                    onClick={() => {
+                        setGiftLink(null);
+                        setGiftSecret(null);
+                        setTxId(null);
+                        setAmount('');
+                        setMessage('');
+                    }}
+                    className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                >
+                    Create Another 🎁
+                </button>
             </div>
         );
     }
@@ -219,13 +212,9 @@ export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
                         Creating Gift...
                     </span>
                 ) : (
-                    '🎁 Pack Your Gift'
+                    '🎁 Create Gift Pack'
                 )}
             </button>
-
-            <p className="text-xs text-center text-gray-500">
-                Contract: <code className="text-orange-400">{CONTRACT_ADDRESS}.{CONTRACT_NAME}</code>
-            </p>
         </form>
     );
 }

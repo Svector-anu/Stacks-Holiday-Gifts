@@ -1,16 +1,33 @@
 'use client';
 
-import { use } from 'react';
+import { use, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import ClaimGift from '@/components/ClaimGift';
+import dynamic from 'next/dynamic';
 import ConnectWallet from '@/components/ConnectWallet';
 import Link from 'next/link';
+
+// Force dynamic rendering
+export const forceDynamic = 'force-dynamic';
+
+// Dynamically import ClaimGift with SSR disabled
+const ClaimGift = dynamic(
+    () => import('@/components/ClaimGift'),
+    {
+        ssr: false,
+        loading: () => (
+            <div className="text-center py-8">
+                <div className="animate-pulse text-4xl mb-4">🎁</div>
+                <p className="text-gray-400">Loading...</p>
+            </div>
+        )
+    }
+);
 
 interface PageProps {
     params: Promise<{ id: string }>;
 }
 
-export default function GiftPage({ params }: PageProps) {
+function GiftContent({ params }: PageProps) {
     const { id } = use(params);
     const searchParams = useSearchParams();
     const secret = searchParams.get('s') || '';
@@ -63,5 +80,20 @@ export default function GiftPage({ params }: PageProps) {
                 </div>
             </footer>
         </div>
+    );
+}
+
+export default function GiftPage({ params }: PageProps) {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <div className="text-6xl mb-4 animate-pulse">🎁</div>
+                    <p className="text-gray-400">Loading gift...</p>
+                </div>
+            </div>
+        }>
+            <GiftContent params={params} />
+        </Suspense>
     );
 }

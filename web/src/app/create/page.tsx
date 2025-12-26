@@ -1,8 +1,25 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import ConnectWallet from "@/components/ConnectWallet";
-import CreateGiftForm from "@/components/CreateGiftForm";
 import Link from "next/link";
+
+// Force dynamic rendering
+export const forceDynamic = 'force-dynamic';
+
+// Dynamically import CreateGiftForm with SSR disabled
+const CreateGiftForm = dynamic(
+    () => import('@/components/CreateGiftForm'),
+    {
+        ssr: false,
+        loading: () => (
+            <div className="text-center py-8">
+                <div className="animate-pulse text-4xl mb-4">🎁</div>
+                <p className="text-gray-400">Loading...</p>
+            </div>
+        )
+    }
+);
 
 export default function CreatePage() {
     return (

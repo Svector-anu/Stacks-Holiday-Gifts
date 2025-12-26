@@ -89,7 +89,7 @@ clarinet deployments apply --testnet
 | `get-gift` | Get gift details |
 | `is-claimable` | Check if a gift can still be claimed |
 
-## Fee Structure
+erce## Fee Structure
 
 - **Service Fee**: 0.5% on gift creation
 - **Expiry**: 14 days (~2016 blocks)

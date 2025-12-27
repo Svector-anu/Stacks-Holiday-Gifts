@@ -1,9 +1,9 @@
 {
-    "buildCommand": "cd web && npm run build",
-    "outputDirectory": "web/.next",
-    "installCommand": "cd web && npm install",
+    "buildCommand": "npm run build",
+    "outputDirectory": ".next",
+    "installCommand": "npm install",
     "framework": "nextjs",
-    "devCommand": "cd web && npm run dev",
+    "devCommand": "npm run dev",
     "env": {
         "NEXT_PUBLIC_NETWORK": "testnet",
         "NEXT_PUBLIC_CONTRACT_ADDRESS": "ST3J1V2ZNMJRPYMYPJ8Q2NYHD8XW2V5KCMJ5GN9Z2",

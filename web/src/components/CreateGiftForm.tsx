@@ -16,7 +16,6 @@ import {
     uintCV,
     stringUtf8CV,
     bufferCV,
-    cvToHex,
 } from '@stacks/transactions';
 
 interface CreateGiftFormProps {
@@ -32,6 +31,7 @@ export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
     const [giftSecret, setGiftSecret] = useState<string | null>(null);
     const [giftAmount, setGiftAmount] = useState<number>(0);
     const [giftMessage, setGiftMessage] = useState<string>('');
+    const [createdGiftId, setCreatedGiftId] = useState<number>(0);
     const [txId, setTxId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -97,6 +97,7 @@ export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
                 setGiftSecret(secret);
                 setGiftAmount(amountNum);
                 setGiftMessage(message);
+                setCreatedGiftId(giftId);
                 onGiftCreated?.(link, secret);
             } else {
                 setError('Transaction was not completed');
@@ -131,7 +132,7 @@ export default function CreateGiftForm({ onGiftCreated }: CreateGiftFormProps) {
         return (
             <div>
                 <GiftInviteCard
-                    giftId={Date.now()}
+                    giftId={createdGiftId}
                     secret={giftSecret}
                     amount={giftAmount}
                     message={giftMessage}

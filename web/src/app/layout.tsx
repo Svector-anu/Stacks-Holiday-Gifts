@@ -3,6 +3,7 @@ import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { AppKitProvider } from "@/context/AppKitProvider";
 import { WalletProvider } from "@/context/WalletContext";
+import ClientOnly from "@/components/ClientOnly";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -25,21 +26,31 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${montserrat.variable} font-sans antialiased bg-gray-950 text-white min-h-screen`}>
-        <AppKitProvider>
-          <WalletProvider>
-            {/* Animated background */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-              <div className="absolute top-20 left-10 text-4xl opacity-20 animate-pulse">❄️</div>
-              <div className="absolute top-40 right-20 text-3xl opacity-20 animate-pulse delay-150">❄️</div>
-              <div className="absolute bottom-32 left-1/4 text-2xl opacity-20 animate-pulse delay-300">❄️</div>
-              <div className="absolute top-1/3 right-1/3 text-3xl opacity-20 animate-pulse delay-500">✨</div>
-              <div className="absolute bottom-20 right-10 text-4xl opacity-20 animate-pulse delay-700">🎄</div>
+        <ClientOnly fallback={
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-6xl mb-4 animate-pulse">🎁</div>
+              <p className="text-gray-400">Loading...</p>
             </div>
+          </div>
+        }>
+          <AppKitProvider>
+            <WalletProvider>
+              {/* Animated background */}
+              <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-20 left-10 text-4xl opacity-20 animate-pulse">❄️</div>
+                <div className="absolute top-40 right-20 text-3xl opacity-20 animate-pulse delay-150">❄️</div>
+                <div className="absolute bottom-32 left-1/4 text-2xl opacity-20 animate-pulse delay-300">❄️</div>
+                <div className="absolute top-1/3 right-1/3 text-3xl opacity-20 animate-pulse delay-500">✨</div>
+                <div className="absolute bottom-20 right-10 text-4xl opacity-20 animate-pulse delay-700">🎄</div>
+              </div>
 
-            {children}
-          </WalletProvider>
-        </AppKitProvider>
+              {children}
+            </WalletProvider>
+          </AppKitProvider>
+        </ClientOnly>
       </body>
     </html>
   );
 }
+

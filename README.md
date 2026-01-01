@@ -106,4 +106,4 @@ MIT
 
 ---
 
-🎄 **Happy Holidays!** 🎄
+🎄 **Happy Holidays and enjoy your year!** 🎄

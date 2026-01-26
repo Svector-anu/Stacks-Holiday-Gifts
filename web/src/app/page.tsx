@@ -121,7 +121,7 @@ export default function Home() {
             <div className="glass rounded-2xl p-6 text-center">
               <div className="text-4xl mb-4">⚡</div>
               <h3 className="font-bold mb-2">Fast & Secure</h3>
-              <p className="text-gray-400 text-sm">Built on Stacks blockchain for secure STX transfers</p>
+              <p className="text-gray-400 text-sm">Built on Stacks blockchain • Btc L2 • for secure STX transfers</p>
             </div>
             <div className="glass rounded-2xl p-6 text-center">
               <div className="text-4xl mb-4">🔗</div>

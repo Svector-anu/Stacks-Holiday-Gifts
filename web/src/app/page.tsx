@@ -41,7 +41,7 @@ export default function Home() {
       <header className="fixed top-0 left-0 right-0 z-50 glass">
         <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-2">
-            <span className="text-2xl">🎁</span>
+            <span className="text-2xl">gift</span>
             <span className="font-bold text-xl bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent">
               Stacks Gifts
             </span>
@@ -55,7 +55,7 @@ export default function Home() {
         <div className="max-w-4xl mx-auto">
           {/* Hero */}
           <div className="text-center mb-12">
-            <div className="text-7xl mb-6">🎁</div>
+            <div className="text-7xl mb-6">gift</div>
             <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-orange-400 via-red-400 to-purple-400 bg-clip-text text-transparent">
               Stacks Holiday Gifts
             </h1>
@@ -104,7 +104,7 @@ export default function Home() {
                   type="submit"
                   className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-600 transition-all"
                 >
-                  🎁 Open Gift
+                   Open Gift
                 </button>
               </form>
 
@@ -126,7 +126,7 @@ export default function Home() {
             <div className="glass rounded-2xl p-6 text-center">
               <div className="text-4xl mb-4">🔗</div>
               <h3 className="font-bold mb-2">Shareable Links</h3>
-              <p className="text-gray-400 text-sm">Share gifts via secret message - no wallet needed to receive</p>
+              <p className="text-gray-400 text-sm">Share gifts via secret message - no wallet needed to receive - simple and easy to use</p>
             </div>
             <div className="glass rounded-2xl p-6 text-center">
               <div className="text-4xl mb-4">🎄</div>

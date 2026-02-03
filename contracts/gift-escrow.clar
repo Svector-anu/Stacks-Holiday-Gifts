@@ -1,5 +1,6 @@
 ;; Gift Escrow Contract for Stacks Holiday Gifts
 ;; Allows users to create STX gifts that can be claimed via secret link
+;; Stacks-Holiday-Gifts Contract
 
 ;; Constants
 (define-constant CONTRACT_OWNER tx-sender)

@@ -12,8 +12,12 @@
 (define-constant ERR_ZERO_AMOUNT (err u106))
 (define-constant ERR_INSUFFICIENT_BALANCE (err u107))
 
+
 ;; Gift expiry: ~14 days in blocks (assuming ~10 min per block)
 (define-constant EXPIRY_BLOCKS u2016)
+(define-constant MIN_SECRET_LENGTH u16)
+(define-constant MAX_SECRET_LENGTH u32)
+(define-constant ERR_INVALID_SECRET_LENGTH (err u108))
 
 ;; Service fee: 0.5% (50 basis points)
 (define-constant FEE_BPS u50)
@@ -65,6 +69,7 @@
         )
         ;; Validations
         (asserts! (> amount u0) ERR_ZERO_AMOUNT)
+     
 
         ;; Transfer gift amount to contract (sender pays)
         (try! (stx-transfer? gift-amount tx-sender (as-contract tx-sender)))
@@ -114,6 +119,8 @@
         (asserts! (not (get claimed gift)) ERR_ALREADY_CLAIMED)
         (asserts! (not (get refunded gift)) ERR_ALREADY_REFUNDED)
         (asserts! (is-eq computed-hash (get secret-hash gift)) ERR_INVALID_SECRET)
+        (asserts! (<= (len secret-hash) MAX_SECRET_LENGTH) ERR_INVALID_SECRET_LENGTH)
+        (asserts! (>= (len secret-hash) MIN_SECRET_LENGTH) ERR_INVALID_SECRET_LENGTH)
 
         ;; Transfer STX to claimer (from contract)
         (try! (as-contract (stx-transfer? (get amount gift) tx-sender claimer)))
